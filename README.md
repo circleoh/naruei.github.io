@@ -1,4 +1,6 @@
 # naurei.github.com
-=========
+#### README!!!
+Прежде всего игры предназначены для одной простой вещи: служить развлечением для каждого.
 
-A Minimalist Text Adventure Game, strongly inspired by A Dark Room, made by a student studying CS and loves game
+#### WAAA!!!
+岩田には 「プログラマーはノーと言っちゃいけない」 という持論があった。これは「どんなに困難なプログラミングが想定されたとしてもノーと言った時点で企画そのものが駄目になるから、とにかく実現を目指し、無理だった際の代案も考える」という理念である。
