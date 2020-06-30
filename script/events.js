@@ -7,6 +7,7 @@ var Events = {
 	_PANEL_FADE: 200,
 	_FIGHT_SPEED: 100,
 	_EAT_COOLDOWN: 5,
+	_MEDS_COOLDOWN: 7,
 	STUN_DURATION: 4000,
 	
 	init: function(options) {
@@ -25,11 +26,14 @@ var Events = {
 		Events.eventStack = [];
 		
 		Events.scheduleNextEvent();
+		
+		//subscribe to stateUpdates
+		$.Dispatch('stateUpdate').subscribe(Events.handleStateUpdates);
 	},
 	
 	options: {}, // Nothing for now
     
-    activeEvent: null,
+	activeEvent: null,
 	activeScene: null,
 	eventPanel: null,
     
@@ -40,7 +44,7 @@ var Events = {
 		
 		// Scene reward
 		if(scene.reward) {
-			Engine.addStores(scene.reward, true);
+			$SM.addM('stores', scene.reward);
 		}
 		
 		// onLoad
@@ -73,7 +77,7 @@ var Events = {
 		Events.createFighterDiv('@', World.health, World.getMaxHealth()).attr('id', 'wanderer').appendTo(desc);
 		
 		// Draw the enemy
-		Events.createFighterDiv(scene.char, scene.health, scene.health).attr('id', 'enemy').appendTo(desc);
+		Events.createFighterDiv(scene.chara, scene.health, scene.health).attr('id', 'enemy').appendTo(desc);
 		
 		// Draw the action buttons
 		var btns = $('#buttons', Events.eventPanel());
@@ -103,27 +107,60 @@ var Events = {
 			Events.createAttackButton('fists').prependTo(btns);
 		}
 		
-		var eat = new Button.Button({
-			id: 'eat',
-			text: 'eat meat',
-			cooldown: Events._EAT_COOLDOWN,
-			click: Events.eatMeat,
-			cost: { 'cured meat': 1 }
-		}).appendTo(btns);
-		
-		if(Path.outfit['cured meat'] == 0) {
-			Button.setDisabled(eat, true);
-		}
+		Events.createEatMeatButton().appendTo(btns);
+		if((Path.outfit['medicine'] || 0) != 0) {
+		  Events.createUseMedsButton().appendTo(btns);
+	  }
 		
 		// Set up the enemy attack timer
 		Events._enemyAttackTimer = setTimeout(Events.enemyAttack, scene.attackDelay * 1000);
+	},
+	
+	createEatMeatButton: function(cooldown) {
+		if (cooldown == null) {
+			cooldown = Events._EAT_COOLDOWN;
+		}
+		
+		var btn = new Button.Button({
+			id: 'eat',
+			text: 'eat meat',
+			cooldown: cooldown,
+			click: Events.eatMeat,
+			cost: { 'cured meat': 1 }
+		});
+		
+		if(Path.outfit['cured meat'] == 0) {
+			Button.setDisabled(btn, true);
+		}
+		
+		return btn;
+	},
+	
+	createUseMedsButton: function(cooldown) {
+		if (cooldown == null) {
+			cooldown = Events._MEDS_COOLDOWN;
+		}
+		
+		var btn = new Button.Button({
+			id: 'meds',
+			text: 'use meds',
+			cooldown: cooldown,
+			click: Events.useMeds,
+			cost: { 'medicine': 1 }
+		});
+		
+		if((Path.outfit['medicine'] || 0) == 0) {
+			Button.setDisabled(btn, true);
+		}
+		
+		return btn;
 	},
 	
 	createAttackButton: function(weaponName) {
 		var weapon = World.Weapons[weaponName];
 		var cd = weapon.cooldown;
 		if(weapon.type == 'unarmed') {
-			if(Engine.hasPerk('unarmed master')) {
+			if($SM.hasPerk('unarmed master')) {
 				cd /= 2;
 			}
 		}
@@ -161,20 +198,46 @@ var Events = {
 	},
 	
 	eatMeat: function() {
-		if(Events.activeEvent() && Path.outfit['cured meat'] > 0) {
+		if(Path.outfit['cured meat'] > 0) {
 			Path.outfit['cured meat']--;
 			World.updateSupplies();
 			if(Path.outfit['cured meat'] == 0) {
 				Button.setDisabled($('#eat'), true);
 			}
-			var w = $('#wanderer');
-			var hp = w.data('hp');
+			
+			var hp = World.health;
 			hp += World.meatHeal();
 			hp = hp > World.getMaxHealth() ? World.getMaxHealth() : hp;
-			w.data('hp', hp);
 			World.setHp(hp);
-			Events.updateFighterDiv(w);
-			Events.drawFloatText('+' + World.meatHeal(), '#wanderer .hp');
+			
+			if(Events.activeEvent()) {
+				var w = $('#wanderer');
+				w.data('hp', hp);
+				Events.updateFighterDiv(w);
+				Events.drawFloatText('+' + World.meatHeal(), '#wanderer .hp');
+			}
+		}
+	},
+	
+	useMeds: function() {
+		if(Path.outfit['medicine'] > 0) {
+			Path.outfit['medicine']--;
+			World.updateSupplies();
+			if(Path.outfit['medicine'] == 0) {
+				Button.setDisabled($('#meds'), true);
+			}
+			
+			var hp = World.health;
+			hp += World.medsHeal();
+			hp = hp > World.getMaxHealth() ? World.getMaxHealth() : hp;
+			World.setHp(hp);
+			
+			if(Events.activeEvent()) {
+				var w = $('#wanderer');
+				w.data('hp', hp);
+				Events.updateFighterDiv(w);
+				Events.drawFloatText('+' + World.medsHeal(), '#wanderer .hp');
+			}
 		}
 	},
 	
@@ -183,14 +246,14 @@ var Events = {
 			var weaponName = btn.attr('id').substring(7).replace('-', ' ');
 			var weapon = World.Weapons[weaponName];
 			if(weapon.type == 'unarmed') {
-				if(!State.punches) State.punches = 0;
-				State.punches++;
-				if(State.punches == 50 && !Engine.hasPerk('boxer')) {
-					Engine.addPerk('boxer');
-				} else if(State.punches == 150 && !Engine.hasPerk('martial artist')) {
-					Engine.addPerk('martial artist');
-				} else if(State.punches == 300 && !Engine.hasPerk('unarmed master')) {
-					Engine.addPerk('unarmed master');
+				if(!$SM.get('character.punches')) $SM.set('character.punches', 0);
+				$SM.add('character.punches', 1);
+				if($SM.get('character.punches') == 50 && !$SM.hasPerk('boxer')) {
+					$SM.addPerk('boxer');
+				} else if($SM.get('character.punches') == 150 && !$SM.hasPerk('martial artist')) {
+					$SM.addPerk('martial artist');
+				} else if($SM.get('character.punches') == 300 && !$SM.hasPerk('unarmed master')) {
+					$SM.addPerk('unarmed master');
 				}
 				
 			}
@@ -234,16 +297,16 @@ var Events = {
 			if(Math.random() <= World.getHitChance()) {
 				dmg = weapon.damage;
 				if(typeof dmg == 'number') {
-					if(weapon.type == 'unarmed' && Engine.hasPerk('boxer')) {
-						dmg *= 2
-					}
-					if(weapon.type == 'unarmed' && Engine.hasPerk('martial artist')) {
-						dmg *= 3;
-					}
-					if(weapon.type == 'unarmed' && Engine.hasPerk('unarmed master')) {
+					if(weapon.type == 'unarmed' && $SM.hasPerk('boxer')) {
 						dmg *= 2;
 					}
-					if(weapon.type == 'melee' && Engine.hasPerk('barbarian')) {
+					if(weapon.type == 'unarmed' && $SM.hasPerk('martial artist')) {
+						dmg *= 3;
+					}
+					if(weapon.type == 'unarmed' && $SM.hasPerk('unarmed master')) {
+						dmg *= 2;
+					}
+					if(weapon.type == 'melee' && $SM.hasPerk('barbarian')) {
 						dmg = Math.floor(dmg * 1.5);
 					}
 				}
@@ -273,7 +336,7 @@ var Events = {
 		
 		fighter.stop(true, true).animate(start, Events._FIGHT_SPEED, function() {
 			var enemyHp = enemy.data('hp');
-			var msg;
+			var msg = "";
 			if(typeof dmg == 'number') {
 				if(dmg < 0) {
 					msg = 'miss';
@@ -318,7 +381,7 @@ var Events = {
 		$('<div>').css(start).addClass('bullet').text('o').appendTo('#description')
 				.animate(end, Events._FIGHT_SPEED * 2, 'linear', function() {
 			var enemyHp = enemy.data('hp');
-			var msg;
+			var msg = "";
 			if(typeof dmg == 'number') {
 				if(dmg < 0) {
 					msg = 'miss';
@@ -357,7 +420,7 @@ var Events = {
 		
 		if(!$('#enemy').data('stunned')) {
 			var toHit = scene.hit;
-			toHit *= Engine.hasPerk('evasive') ? 0.8 : 1;
+			toHit *= $SM.hasPerk('evasive') ? 0.8 : 1;
 			var dmg = -1;
 			if(Math.random() <= toHit) {
 				dmg = scene.damage;
@@ -410,6 +473,11 @@ var Events = {
 							},
 							text: 'leave'
 						}).appendTo(btns);
+						
+						Events.createEatMeatButton(0).appendTo(btns);
+						if((Path.outfit['medicine'] || 0) != 0) {
+						  Events.createUseMedsButton(0).appendTo(btns);
+					  }
 					}
 				} catch(e) {
 					// It is possible to die and win if the timing is perfect. Just let it fail.
@@ -440,7 +508,7 @@ var Events = {
 	
 	dropStuff: function(e) {
 		e.stopPropagation();
-		var btn = $(this)
+		var btn = $(this);
 		var thing = btn.data('thing');
 		var num = btn.data('num');
 		var lootButtons = $('#lootButtons');
@@ -461,7 +529,6 @@ var Events = {
 		Path.outfit[thing] -= num;
 		Events.getLoot(btn.closest('.button'));
 		World.updateSupplies();
-		$('#dropMenu').remove();
 	},
 	
 	getLoot: function(btn) {
@@ -470,7 +537,6 @@ var Events = {
 			var weight = Path.getWeight(name);
 			var freeSpace = Path.getFreeSpace();
 			if(weight <= freeSpace) {
-				var loot = Events.activeEvent().scenes[Events.activeScene].loot[name];
 				var num = btn.data('numLeft');
 				num--;
 				btn.data('numLeft', num);
@@ -483,6 +549,7 @@ var Events = {
 						}
 					});
 				} else {
+					// #dropMenu gets removed by this.
 					btn.text(name + ' [' + num + ']');
 				}
 				var curNum = Path.outfit[name];
@@ -490,7 +557,14 @@ var Events = {
 				curNum++;
 				Path.outfit[name] = curNum;
 				World.updateSupplies();
-			} else {
+
+				// Update weight and free space variables so we can decide
+				// whether or not to bring up/update the drop menu.
+				weight = Path.getWeight(name);
+				freeSpace = Path.getFreeSpace();
+			}
+
+			if(weight > freeSpace && btn.data('numLeft') > 0) {
 				// Draw the drop menu
 				Engine.log('drop menu');
 				$('#dropMenu').remove();
@@ -520,8 +594,8 @@ var Events = {
 		} 
 	},
 	
-	createFighterDiv: function(char, hp, maxhp) {
-		var fighter = $('<div>').addClass('fighter').text(char).data('hp', hp).data('maxHp', maxhp);
+	createFighterDiv: function(chara, hp, maxhp) {
+		var fighter = $('<div>').addClass('fighter').text(chara).data('hp', hp).data('maxHp', maxhp);
 		$('<div>').addClass('hp').text(hp+'/'+maxhp).appendTo(fighter);
 		return fighter;
 	},
@@ -574,7 +648,7 @@ var Events = {
 			} else if(b.cost) {
 				var disabled = false;
 				for(var store in b.cost) {
-					var num = Engine.activeModule == World ? Path.outfit[store] : Engine.getStore(store);
+					var num = Engine.activeModule == World ? Path.outfit[store] : $SM.get('stores["'+store+'"]', true);
 					if(typeof num != 'number') num = 0;
 					if(num < b.cost[store]) {
 						// Too expensive
@@ -593,7 +667,7 @@ var Events = {
 		var costMod = {};
 		if(info.cost) {
 			for(var store in info.cost) {
-				var num = Engine.activeModule == World ? Path.outfit[store] : Engine.getStore(store);
+				var num = Engine.activeModule == World ? Path.outfit[store] : $SM.get('stores["'+store+'"]', true);
 				if(typeof num != 'number') num = 0;
 				if(num < info.cost[store]) {
 					// Too expensive
@@ -607,7 +681,7 @@ var Events = {
 				}
 				World.updateSupplies();
 			} else {
-				Engine.addStores(costMod);
+				$SM.addM('stores', costMod);
 			}
 		}
 		
@@ -617,7 +691,7 @@ var Events = {
 		
 		// Reward
 		if(info.reward) {
-			Engine.addStores(info.reward);
+			$SM.addM('stores', info.reward);
 		}
 		
 		Events.updateButtons();
@@ -716,7 +790,7 @@ var Events = {
     
     scheduleNextEvent: function(scale) {
     	var nextEvent = Math.floor(Math.random()*(Events._EVENT_TIME_RANGE[1] - Events._EVENT_TIME_RANGE[0])) + Events._EVENT_TIME_RANGE[0];
-    	if(scale > 0) { nextEvent *= scale }
+    	if(scale > 0) { nextEvent *= scale; }
     	Engine.log('next event scheduled in ' + nextEvent + ' minutes');
     	Events._eventTimeout = setTimeout(Events.triggerEvent, nextEvent * 60 * 1000);
     },
@@ -731,5 +805,11 @@ var Events = {
     		// Force refocus on the body. I hate you, IE.
     		$('body').focus();
     	});
-    }
+    },
+    
+    handleStateUpdates: function(e){
+		if(e.category == 'stores' && Events.activeEvent() != null){
+			Events.updateButtons();
+		}
+	}
 };

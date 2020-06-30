@@ -5,7 +5,7 @@ Events.Outside = [
     { /* Ruined traps */
     	title: 'A Ruined Trap',
 		isAvailable: function() {
-			return Engine.activeModule == Outside && Outside.numBuilding('trap') > 0;
+			return Engine.activeModule == Outside && $SM.get('game.buildings["trap"]', true) > 0;
 		},
 		scenes: {
 			'start': {
@@ -14,8 +14,8 @@ Events.Outside = [
 					'large prints lead away, into the forest.'
 				],
 				onLoad: function() {
-					var numWrecked = Math.floor(Math.random() * Outside.numBuilding('trap')) + 1;
-					Outside.addBuilding('trap', -numWrecked);
+					var numWrecked = Math.floor(Math.random() * $SM.get('game.buildings["trap"]', true)) + 1;
+					$SM.add('game.buildings["trap"]', -numWrecked);
 					Outside.updateVillage();
 					Outside.updateTrapButton();
 				},
@@ -63,10 +63,124 @@ Events.Outside = [
 		}
     },
     
+    { /* Sickness */
+    	title: 'Sickness',
+  		isAvailable: function() {
+  			return Engine.activeModule == Outside && $SM.get('game.population', true) > 10 && $SM.get('game.population', true) < 50;
+  		},
+  		scenes: {
+  			'start': {
+  				text: [
+  			    'a sickness is spreading through the village.',
+  			    'medicine is needed immediately.'
+  		    ],
+  		    buttons: {
+  		      'heal': {
+  		        text: '1 medicine',
+  		        cost: { 'medicine' : 1 },
+  		        nextScene: {1: 'healed'}
+  		      },
+  					'ignore': {
+  						text: 'ignore it',
+  						nextScene: {1: 'death'}
+  					}
+  				}
+  			},
+  			'healed': {
+  				text: [
+  			    'the sickness is cured in time.'
+  		    ],
+  		    buttons: {
+  					'end': {
+  						text: 'go home',
+  						nextScene: 'end'
+  					}
+  				}
+  			},
+  			'death': {
+  				text: [
+  			    'the sickness spreads through the village.',
+  			    'the days are spent with burials.',
+  			    'the nights are rent with screams.'
+  		    ],
+  		    onLoad: function() {
+				    var numKilled = Math.floor(Math.random() * 20) + 1;
+    				Outside.killVillagers(numKilled);
+    			},
+  		    buttons: {
+  					'end': {
+  						text: 'go home',
+  						nextScene: 'end'
+  					}
+  				}
+  			}
+  		}
+    },
+    
+    { /* Plague */
+    	title: 'Plague',
+  		isAvailable: function() {
+  			return Engine.activeModule == Outside && $SM.get('game.population', true) > 50;
+  		},
+  		scenes: {
+  			'start': {
+  				text: [
+  			    'a terrible plague is fast spreading through the village.',
+  			    'medicine is needed immediately.'
+  		    ],
+  		    buttons: {
+  		      'heal': {
+  		        text: '5 medicine',
+  		        cost: { 'medicine' : 5 },
+  		        nextScene: {1: 'healed'}
+  		      },
+  					'ignore': {
+  						text: 'do nothing',
+  						nextScene: {1: 'death'}
+  					}
+  				}
+  			},
+  			'healed': {
+  				text: [
+  			    'the plague is kept from spreading.',
+  			    'only a few die.',
+  			    'the rest bury them.'
+  		    ],
+  		    onLoad: function() {
+				    var numKilled = Math.floor(Math.random() * 5) + 2;
+    				Outside.killVillagers(numKilled);
+    			},
+  		    buttons: {
+  					'end': {
+  						text: 'go home',
+  						nextScene: 'end'
+  					}
+  				}
+  			},
+  			'death': {
+  				text: [
+  			    'the plague rips through the village.',
+  			    'the nights are rent with screams.',
+  			    'the only hope is a quick death.'
+  		    ],
+  		    onLoad: function() {
+				    var numKilled = Math.floor(Math.random() * 80) + 10;
+    				Outside.killVillagers(numKilled);
+    			},
+  		    buttons: {
+  					'end': {
+  						text: 'go home',
+  						nextScene: 'end'
+  					}
+  				}
+  			}
+  		}
+    },
+    
     { /* Beast attack */
     	title: 'A Beast Attack',
 		isAvailable: function() {
-			return Engine.activeModule == Outside && Outside.getPopulation() > 0;
+			return Engine.activeModule == Outside && $SM.get('game.population', true) > 0;
 		},
 		scenes: {
 			'start': {
@@ -97,7 +211,7 @@ Events.Outside = [
     { /* Soldier attack */
     	title: 'A Military Raid',
 		isAvailable: function() {
-			return Engine.activeModule == Outside && Outside.getPopulation() > 0 && State.cityCleared;
+			return Engine.activeModule == Outside && $SM.get('game.population', true) > 0 && $SM.get('game.cityCleared');;
 		},
 		scenes: {
 			'start': {

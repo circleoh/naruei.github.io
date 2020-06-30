@@ -12,7 +12,7 @@ Events.Encounters = [
  			'start': {
  				combat: true,
  				enemy: 'snarling beast',
- 				char: 'B',
+ 				chara: 'B',
  				damage: 1,
  				hit: 0.8,
  				attackDelay: 1,
@@ -47,7 +47,7 @@ Events.Encounters = [
   			'start': {
   				combat: true,
   				enemy: 'gaunt man',
-  				char: 'G',
+  				chara: 'G',
   				damage: 2,
   				hit: 0.8,
   				attackDelay: 2,
@@ -82,7 +82,7 @@ Events.Encounters = [
   			'start': {
   				combat: true,
   				enemy: 'strange bird',
-  				char: 'B',
+  				chara: 'B',
   				damage: 3,
   				hit: 0.8,
   				attackDelay: 2,
@@ -109,6 +109,46 @@ Events.Encounters = [
 		}
   	},
 	/* Tier 2*/
+	{ /* Shivering Man */
+     	title: 'A Shivering Man',
+  		isAvailable: function() {
+  			return World.getDistance() > 10 && World.getDistance() <= 20 && World.getTerrain() == World.TILE.BARRENS;
+  		},
+  		scenes: {
+  			'start': {
+  				combat: true,
+  				enemy: 'shivering man',
+  				chara: 'S',
+  				damage: 5,
+  				hit: 0.5,
+  				attackDelay: 1,
+  				health: 20,
+  				loot: {
+  					'cloth': {
+  						min: 1,
+  						max: 1,
+  						chance: 0.2
+  					},
+  					'teeth': {
+  						min: 1,
+  						max: 2,
+  						chance: 0.8
+  					},
+  					'leather': {
+  						min: 1,
+  						max: 1,
+  						chance: 0.2
+  					},
+  					'medicine': {
+  					  min: 1,
+  					  max: 3,
+  					  chance: 0.7
+  					}
+  				},
+  				notification: 'a shivering man approaches and attacks with surprising strength'
+  			}
+		}
+  },
 	{ /* Man-eater */
 		title: 'A Man-Eater',
  		isAvailable: function() {
@@ -118,7 +158,7 @@ Events.Encounters = [
  			'start': {
  				combat: true,
  				enemy: 'man-eater',
- 				char: 'E',
+ 				chara: 'E',
  				damage: 3,
  				hit: 0.8,
  				attackDelay: 1,
@@ -153,7 +193,7 @@ Events.Encounters = [
   			'start': {
   				combat: true,
   				enemy: 'scavenger',
-  				char: 'S',
+  				chara: 'S',
   				damage: 4,
   				hit: 0.8,
   				attackDelay: 2,
@@ -169,11 +209,16 @@ Events.Encounters = [
   						max: 10,
   						chance: 0.8
   					},
-					'iron': {
-						min: 1,
-						max: 5,
-						chance: 0.5
-					}
+  					'iron': {
+  						min: 1,
+  						max: 5,
+  						chance: 0.5
+  					},
+  					'medicine': {
+  					  min: 1,
+  					  max: 2,
+  					  chance: 0.1
+  					}
   				},
   				notification: 'a scavenger draws close, hoping for an easy score'
   			}
@@ -188,7 +233,7 @@ Events.Encounters = [
   			'start': {
   				combat: true,
   				enemy: 'lizard',
-  				char: 'L',
+  				chara: 'L',
   				damage: 5,
   				hit: 0.8,
   				attackDelay: 2,
@@ -224,7 +269,7 @@ Events.Encounters = [
  			'start': {
  				combat: true,
  				enemy: 'feral terror',
- 				char: 'F',
+ 				chara: 'F',
  				damage: 6,
  				hit: 0.8,
  				attackDelay: 1,
@@ -260,7 +305,7 @@ Events.Encounters = [
   				combat: true,
   				enemy: 'soldier',
 				ranged: true,
-  				char: 'D',
+  				chara: 'D',
   				damage: 8,
   				hit: 0.8,
   				attackDelay: 2,
@@ -271,16 +316,21 @@ Events.Encounters = [
   						max: 10,
   						chance: 0.8
   					},
-					'bullets': {
-						min: 1,
-						max: 5,
-						chance: 0.5
-					},
-					'rifle': {
-						min: 1,
-						max: 1,
-						chance: 0.2
-					}
+  					'bullets': {
+  						min: 1,
+  						max: 5,
+  						chance: 0.5
+  					},
+  					'rifle': {
+  						min: 1,
+  						max: 1,
+  						chance: 0.2
+  					},
+  					'medicine': {
+  					  min: 1,
+  					  max: 2,
+  					  chance: 0.1
+  					}
   				},
   				notification: 'a soldier opens fire from across the desert'
   			}
@@ -295,7 +345,7 @@ Events.Encounters = [
   			'start': {
   				combat: true,
   				enemy: 'sniper',
-  				char: 'S',
+  				chara: 'S',
   				damage: 15,
   				hit: 0.8,
   				attackDelay: 4,
@@ -307,19 +357,24 @@ Events.Encounters = [
   						max: 10,
   						chance: 0.8
   					},
-					'bullets': {
-						min: 1,
-						max: 5,
-						chance: 0.5
-					},
-					'rifle': {
-						min: 1,
-						max: 1,
-						chance: 0.2
-					}
+  					'bullets': {
+  						min: 1,
+  						max: 5,
+  						chance: 0.5
+  					},
+  					'rifle': {
+  						min: 1,
+  						max: 1,
+  						chance: 0.2
+  					},
+  					'medicine': {
+  					  min: 1,
+  					  max: 2,
+  					  chance: 0.1
+  					}
   				},
   				notification: 'a shot rings out, from somewhere in the long grass'
   			}
 		}
-  	},
+  	}
 ];

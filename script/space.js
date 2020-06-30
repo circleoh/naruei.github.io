@@ -41,6 +41,9 @@ var Space = {
 		var h = $('<div>').attr('id', 'hullRemaining').appendTo(this.panel);
 		$('<div>').addClass('row_key').text('hull: ').appendTo(h);
 		$('<div>').addClass('row_val').appendTo(h);
+		
+		//subscribe to stateUpdates
+		$.Dispatch('stateUpdate').subscribe(Space.handleStateUpdates);
 	},
 	
 	options: {}, // Nothing for now
@@ -87,7 +90,7 @@ var Space = {
 	},
 	
 	getSpeed: function() {
-		return Space.SHIP_SPEED + State.ship.thrusters;
+		return Space.SHIP_SPEED + $SM.get('game.spaceShip.thrusters');
 	},
 	
 	updateHull: function() {
@@ -100,7 +103,7 @@ var Space = {
 		if(r < 0.2)
 			c = '#';
 		else if(r < 0.4)
-			c = '$'
+			c = '$';
 		else if(r < 0.6)
 			c = '%';
 		else if(r < 0.8)
@@ -109,7 +112,7 @@ var Space = {
 			c = 'H';
 		
 		var x = Math.floor(Math.random() * 700);
-		var a = $('<div>').addClass('asteroid').text(c).appendTo('#spacePanel').css('left', x + 'px')
+		var a = $('<div>').addClass('asteroid').text(c).appendTo('#spacePanel').css('left', x + 'px');
 		a.data({
 			xMin: x,
 			xMax: x + a.width(),
@@ -216,7 +219,7 @@ var Space = {
 		
 		Space.ship.css({
 			left: x + 'px',
-			top: y + 'px',
+			top: y + 'px'
 		});
 		
 		Space.lastMove = Date.now();
@@ -247,7 +250,7 @@ var Space = {
 			}
 		}, 1000);
 		
-		setTimeout(function() {
+		Space._panelTimeout = setTimeout(function() {
 			$('#spacePanel, .deleteSave, .share').animate({color: 'white'}, 500, 'linear');
 		}, Space.FTB_SPEED / 2);
 		
@@ -308,6 +311,7 @@ var Space = {
 		Space.done = true;
 		clearInterval(Space._timer);
 		clearInterval(Space._shipTimer);
+		clearTimeout(Space._panelTimeout);
 		
 		// Craaaaash!
 		$('body').removeClass('noMask').stop().animate({
@@ -369,9 +373,10 @@ var Space = {
 					$('#locationSlider, #worldPanel, #spacePanel, #notifications').remove();
 					$('#header').empty();
 					setTimeout(function() {
-						$('body').removeClass('noMask').stop().animate({
+						$('body').stop();
+						$('#starsContainer').animate({
 							opacity: 0,
-							'background-color': '#FFF'
+							'background-color': '#000'
 						}, {
 							duration: 2000, 
 							progress: function() {
@@ -381,18 +386,12 @@ var Space = {
 								$('#notifyGradient').attr('style', 'background-color:'+cur+';background:-webkit-' + s + ';background:' + s);
 							},
 							complete: function() {
-								$('#starsContainer, .deleteSave, .share').remove();
+								$('#starsContainer').remove();
 								if(typeof Storage != 'undefined' && localStorage) {
 									localStorage.clear();
 								}
 								delete window.State;
 								Engine.options = {};
-								setTimeout(function() {
-									Engine.init();
-									$('body').animate({
-										opacity: 1
-									}, 500, 'linear');
-								}, 2000);
 							}
 						});
 					}, 2000);
@@ -449,5 +448,9 @@ var Space = {
 				Engine.log('right off');
 				break;
 		}
+	},
+	
+	handleStateUpdates: function(e){
+		
 	}
 };

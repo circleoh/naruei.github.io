@@ -35,7 +35,7 @@ var Path = {
 		
 		// Add the outfitting area
 		var outfitting = $('<div>').attr('id', 'outfitting').appendTo(this.panel);
-		var bagspace = $('<div>').attr('id', 'bagspace').appendTo(outfitting);
+		$('<div>').attr('id', 'bagspace').appendTo(outfitting);
 		
 		// Add the embark button
 		new Button.Button({
@@ -49,6 +49,15 @@ var Path = {
 		Path.outfit = {};
 		
 		Engine.updateSlider();
+		
+		//subscribe to stateUpdates
+		$.Dispatch('stateUpdate').subscribe(Path.handleStateUpdates);
+	},
+	
+	openPath: function() {
+		Path.init();
+		Engine.event('progress', 'path');
+		Notifications.notify(Room, 'the compass points ' + World.dir);
 	},
 	
 	getWeight: function(thing) {
@@ -59,11 +68,11 @@ var Path = {
 	},
 	
 	getCapacity: function() {
-		if(Engine.getStore('convoy') > 0) {
+		if($SM.get('stores.convoy', true) > 0) {
 			return Path.DEFAULT_BAG_SPACE + 60;
-		} else if(Engine.getStore('wagon') > 0) {
+		} else if($SM.get('stores.wagon', true) > 0) {
 			return Path.DEFAULT_BAG_SPACE + 30;
-		} else if(Engine.getStore('rucksack') > 0) {
+		} else if($SM.get('stores.rucksack', true) > 0) {
 			return Path.DEFAULT_BAG_SPACE + 10;
 		}
 		return Path.DEFAULT_BAG_SPACE;
@@ -85,17 +94,17 @@ var Path = {
 	},
 	
 	updatePerks: function() {
-		if(State.perks) {
+		if($SM.get('character.perks')) {
 			var perks = $('#perks');
 			var needsAppend = false;
 			if(perks.length == 0) {
 				needsAppend = true;
 				perks = $('<div>').attr('id', 'perks');
 			}
-			for(var k in State.perks) {
+			for(var k in $SM.get('character.perks')) {
 				var id = 'perk_' + k.replace(' ', '-');
 				var r = $('#' + id);
-				if(State.perks[k] && r.length == 0) {
+				if($SM.get('character.perks["'+k+'"]') && r.length == 0) {
 					r = $('<div>').attr('id', id).addClass('perkRow').appendTo(perks);
 					$('<div>').addClass('row_key').text(k).appendTo(r);
 					$('<div>').addClass('tooltip bottom right').text(Engine.Perks[k].desc).appendTo(r);
@@ -104,6 +113,10 @@ var Path = {
 			
 			if(needsAppend && perks.children().length > 0) {
 				perks.appendTo(Path.panel);
+			}
+			
+			if(Engine.activeModule === Path) {
+				$('#storesContainer').css({top: perks.height() + 26 + 'px'});
 			}
 		}
 	},
@@ -117,11 +130,11 @@ var Path = {
 		
 		// Add the armour row
 		var armour = "none";
-		if(Engine.getStore('s armour') > 0)
+		if($SM.get('stores["s armour"]', true) > 0)
 			armour = "steel";
-		else if(Engine.getStore('i armour') > 0)
+		else if($SM.get('stores["i armour"]', true) > 0)
 			armour = "iron";
-		else if(Engine.getStore('l armour') > 0)
+		else if($SM.get('stores["l armour"]', true) > 0)
 			armour = "leather";
 		var aRow = $('#armourRow');
 		if(aRow.length == 0) {
@@ -156,15 +169,16 @@ var Path = {
 			'laser rifle': {type: 'weapon' },
 			'energy cell': {type: 'tool' },
 			'bayonet': {type: 'weapon' },
-			'charm': {type: 'tool'}
+			'charm': {type: 'tool'},
+			'medicine': {type: 'tool'}
 		}, Room.Craftables);
 		
 		for(var k in carryable) {
 			var store = carryable[k];
-			var have = State.stores[k];
+			var have = $SM.get('stores["'+k+'"]');
 			var num = Path.outfit[k];
 			num = typeof num == 'number' ? num : 0;
-			var numAvailable = Engine.getStore(k);
+			var numAvailable = $SM.get('stores["'+k+'"]', true);
 			var row = $('div#outfit_row_' + k.replace(' ', '-'), outfit);
 			if((store.type == 'tool' || store.type == 'weapon') && have > 0) {
 				total += num * Path.getWeight(k);
@@ -194,13 +208,17 @@ var Path = {
 				}
 				if(num == 0) {
 					$('.dnBtn', row).addClass('disabled');
+					$('.dnManyBtn', row).addClass('disabled');
 				} else {
 					$('.dnBtn', row).removeClass('disabled');
+					$('.dnManyBtn', row).removeClass('disabled');
 				}
 				if(num >= numAvailable || space < Path.getWeight(k)) {
 					$('.upBtn', row).addClass('disabled');
+					$('.upManyBtn', row).addClass('disabled');
 				} else if(space >= Path.getWeight(k)) {
 					$('.upBtn', row).removeClass('disabled');
+					$('.upManyBtn', row).removeClass('disabled');
 				}
 			} else if(have == 0 && row.length > 0) {
 				row.remove();
@@ -223,11 +241,13 @@ var Path = {
 		var val = $('<div>').addClass('row_val').appendTo(row);
 		
 		$('<span>').text(num).appendTo(val);
-		$('<div>').addClass('upBtn').appendTo(val).click(Path.increaseSupply);
-		$('<div>').addClass('dnBtn').appendTo(val).click(Path.decreaseSupply);
+		$('<div>').addClass('upBtn').appendTo(val).click([1], Path.increaseSupply);
+		$('<div>').addClass('dnBtn').appendTo(val).click([1], Path.decreaseSupply);
+		$('<div>').addClass('upManyBtn').appendTo(val).click([10], Path.increaseSupply);
+		$('<div>').addClass('dnManyBtn').appendTo(val).click([10], Path.decreaseSupply);
 		$('<div>').addClass('clear').appendTo(row);
 		
-		var numAvailable = Engine.getStore(name);
+		var numAvailable = $SM.get('stores["'+name+'"]', true);
 		var tt = $('<div>').addClass('tooltip bottom right').appendTo(row);
 		$('<div>').addClass('row_key').text('weight').appendTo(tt);
 		$('<div>').addClass('row_val').text(Path.getWeight(name)).appendTo(tt);
@@ -237,32 +257,37 @@ var Path = {
 		return row;
 	},
 	
-	increaseSupply: function() {
+  increaseSupply: function(btn) {
 		var supply = $(this).closest('.outfitRow').children('.row_key').text().replace('-', ' ');
-		Engine.log('increasing ' + supply);
+		Engine.log('increasing ' + supply + ' by up to ' + btn.data);
 		var cur = Path.outfit[supply];
 		cur = typeof cur == 'number' ? cur : 0;
-		if(Path.getFreeSpace() >= Path.getWeight(supply) && cur < Engine.getStore(supply)) {
-			Path.outfit[supply] = cur + 1;
+		if(Path.getFreeSpace() >= Path.getWeight(supply) && cur < $SM.get('stores["'+supply+'"]', true)) {
+		  var maxExtraByWeight = Math.floor(Path.getFreeSpace() / Path.getWeight(supply));
+		  var maxExtraByStore  = $SM.get('stores["'+supply+'"]', true) - cur;
+		  var maxExtraByBtn    = btn.data;
+			Path.outfit[supply] = cur + Math.min(maxExtraByBtn, Math.min(maxExtraByWeight, maxExtraByStore));
 			Path.updateOutfitting();
 		}
 	},
 	
-	decreaseSupply: function() {
+	decreaseSupply: function(btn) {
 		var supply = $(this).closest('.outfitRow').children('.row_key').text().replace('-', ' ');
-		Engine.log('decreasing ' + supply);
+		Engine.log('decreasing ' + supply + ' by up to ' + btn.data);
 		var cur = Path.outfit[supply];
 		cur = typeof cur == 'number' ? cur : 0;
 		if(cur > 0) {
-			Path.outfit[supply] = cur - 1;
+			Path.outfit[supply] = Math.max(0, cur - btn.data);
 			Path.updateOutfitting();
 		}
 	},
 	
-	onArrival: function() {
+	onArrival: function(transition_diff) {
 		Path.setTitle();
 		Path.updateOutfitting();
 		Path.updatePerks();
+
+		Engine.moveStoresView($('#perks'), transition_diff);
 	},
 	
 	setTitle: function() {
@@ -271,10 +296,16 @@ var Path = {
 	
 	embark: function() {
 		for(var k in Path.outfit) {
-			Engine.addStore(k, -Path.outfit[k]);
+			$SM.add('stores["'+k+'"]', -Path.outfit[k]);
 		}
 		World.onArrival();
 		$('#outerSlider').animate({left: '-700px'}, 300);
 		Engine.activeModule = World;
+	},
+	
+	handleStateUpdates: function(e){
+		if(e.category == 'character' && e.stateName.indexOf('character.perks') == 0 && Engine.activeModule == Path){
+			Path.updatePerks();
+		};
 	}
-}
+};

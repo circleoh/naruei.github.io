@@ -1,4 +1,4 @@
-adarkroom
+# naurei.github.com
 =========
 
-A Dark Room - A Minimalist Text Adventure
+A Minimalist Text Adventure Game, strongly inspired by A Dark Room, made by a student studying CS and loves game

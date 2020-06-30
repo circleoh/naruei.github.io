@@ -1,6 +1,7 @@
 var World = {
 	
 	RADIUS: 30,
+	VILLAGE_POS: [30, 30],
 	TILE: {
 		VILLAGE: 'A',
 		IRON_MINE: 'I',
@@ -31,8 +32,13 @@ var World = {
 	FIGHT_CHANCE: 0.20,
 	BASE_HEALTH: 10,
 	BASE_HIT_CHANCE: 0.8,
-	MEAT_HEAL: 10,
+	MEAT_HEAL: 8,
+	MEDS_HEAL: 20,
 	FIGHT_DELAY: 3, // At least three moves between fights
+	NORTH: [ 0, -1],
+	SOUTH: [ 0,  1],
+	WEST:  [-1,  0],
+	EAST:  [ 1,  0],
 	
 	Weapons: {
 		'fists': {
@@ -122,11 +128,12 @@ var World = {
 		World.LANDMARKS[World.TILE.BATTLEFIELD] = {num: 5, minRadius: 18, maxRadius: World.RADIUS * 1.5, scene: 'battlefield', label: 'A&nbsp;Battlefield'};
 		World.LANDMARKS[World.TILE.SWAMP] = {num: 1, minRadius: 15, maxRadius: World.RADIUS * 1.5, scene: 'swamp', label: 'A&nbsp;Murky&nbsp;Swamp'};
 		
-		if(typeof State.world == 'undefined') {
-			State.world = {
+		if(typeof $SM.get('features.location.world') == 'undefined') {
+			$SM.set('features.location.world', true);
+			$SM.setM('game.world', {
 				map: World.generateMap(),
 				mask: World.newMask()
-			};
+			});
 		}
 		
 		// Create the World panel
@@ -142,6 +149,9 @@ var World = {
 		$('<div>').attr('id', 'healthCounter').appendTo(outer);
 		
 		Engine.updateOuterSlider();
+		
+		//subscribe to stateUpdates
+		$.Dispatch('stateUpdate').subscribe(World.handleStateUpdates);
 	},
 	
 	clearDungeon: function() {
@@ -151,27 +161,68 @@ var World = {
 	},
 	
 	drawRoad: function() {
-		var xDist = World.curPos[0] - World.RADIUS;
-		var yDist = World.curPos[1] - World.RADIUS;
+		var findClosestRoad = function(startPos) {
+			// We'll search in a spiral to find the closest road tile
+			// We spiral out along manhattan distance contour
+			// lines to ensure we draw the shortest road possible.
+			// No attempt is made to reduce the search space for
+			// tiles outside the map.
+			var searchX, searchY, dtmp,
+				x = 0,
+				y = 0,
+				dx = 1,
+				dy = -1;
+			for (var i = 0; i < Math.pow(World.getDistance(startPos, World.VILLAGE_POS) + 2, 2); i++) {
+				searchX = startPos[0] + x;
+				searchY = startPos[1] + y;
+				if (0 < searchX && searchX < World.RADIUS * 2 && 0 < searchY && searchY < World.RADIUS * 2) {
+					// check for road
+					var tile = World.state.map[searchX][searchY];
+					if (
+					 	tile === World.TILE.ROAD ||
+						(tile === World.TILE.OUTPOST && !(x === 0 && y === 0))  || // outposts are connected to roads
+						tile === World.TILE.VILLAGE // all roads lead home
+					 ) {
+						return [searchX, searchY];
+					}
+				}
+				if (x === 0 || y === 0) {
+					// Turn the corner
+					dtmp = dx;
+					dx = -dy;
+					dy =  dtmp;
+				}
+				if (x === 0 && y <= 0) {
+					x++;
+				} else {
+					x += dx;
+					y += dy;
+				}
+			}
+			return World.VILLAGE_POS;
+		};
+		var closestRoad = findClosestRoad(World.curPos);
+		var xDist = World.curPos[0] - closestRoad[0];
+		var yDist = World.curPos[1] - closestRoad[1];
 		var xDir = Math.abs(xDist)/xDist;
 		var yDir = Math.abs(yDist)/yDist;
 		var xIntersect, yIntersect;
 		if(Math.abs(xDist) > Math.abs(yDist)) {
-			xIntersect = World.RADIUS;
-			yIntersect = World.RADIUS + yDist;
+			xIntersect = closestRoad[0];
+			yIntersect = closestRoad[1] + yDist;
 		} else {
-			xIntersect = World.RADIUS + xDist;
-			yIntersect = World.RADIUS;
+			xIntersect = closestRoad[0] + xDist;
+			yIntersect = closestRoad[1];
 		}
 		
 		for(var x = 0; x < Math.abs(xDist); x++) {
-			if(World.isTerrain(World.state.map[World.RADIUS + (xDir*x)][yIntersect])) {
-				World.state.map[World.RADIUS + (xDir*x)][yIntersect] = World.TILE.ROAD;
+			if(World.isTerrain(World.state.map[closestRoad[0] + (xDir*x)][yIntersect])) {
+				World.state.map[closestRoad[0] + (xDir*x)][yIntersect] = World.TILE.ROAD;
 			}
 		}
 		for(var y = 0; y < Math.abs(yDist); y++) {
-			if(World.isTerrain(World.state.map[xIntersect][World.RADIUS + (yDir*y)])) {
-				World.state.map[xIntersect][World.RADIUS + (yDir*y)] = World.TILE.ROAD;
+			if(World.isTerrain(World.state.map[xIntersect][closestRoad[1] + (yDir*y)])) {
+				World.state.map[xIntersect][closestRoad[1] + (yDir*y)] = World.TILE.ROAD;
 			}
 		}
 		World.drawMap();
@@ -218,7 +269,7 @@ var World = {
 		
 		// Update label
 		var t = 'pockets';
-		if(Engine.getStore('rucksack') > 0) {
+		if($SM.get('stores.rucksack', true) > 0) {
 			t = 'rucksack';
 		}
 		$('#backpackTitle').text(t);
@@ -253,57 +304,111 @@ var World = {
 		return div;
 	},
 	
-	keyDown: function(event) {
-		var moved = true;
+	moveNorth: function() {
+		Engine.log('North');
+		if(World.curPos[1] > 0) World.move(World.NORTH);
+	},
+	
+	moveSouth: function() {
+		Engine.log('South');
+		if(World.curPos[1] < World.RADIUS * 2) World.move(World.SOUTH);
+	},
+	
+	moveWest: function() {
+		Engine.log('West');
+		if(World.curPos[0] > 0) World.move(World.WEST);
+	},
+	
+	moveEast: function() {
+		Engine.log('East');
+		if(World.curPos[0] < World.RADIUS * 2) World.move(World.EAST);
+	},
+	
+	move: function(direction) {
 		var oldTile = World.state.map[World.curPos[0]][World.curPos[1]];
+		World.curPos[0] += direction[0];
+		World.curPos[1] += direction[1];
+		World.narrateMove(oldTile, World.state.map[World.curPos[0]][World.curPos[1]]);
+		World.lightMap(World.curPos[0], World.curPos[1], World.state.mask);
+		World.drawMap();
+		World.doSpace();
+		if(World.checkDanger()) {
+			if(World.danger) {
+				Notifications.notify(World, 'dangerous to be this far from the village without proper protection');
+			} else {
+				Notifications.notify(World, 'safer here');
+			}
+		}
+	},
+	
+	keyDown: function(event) {
 		switch(event.which) {
 			case 38: // Up
 			case 87:
-				Engine.log('up');
-				if(World.curPos[1] > 0) World.curPos[1]--;
+				World.moveNorth();
 				break;
 			case 40: // Down
 			case 83:
-				Engine.log('down');
-				if(World.curPos[1] < World.RADIUS * 2) World.curPos[1]++;
+				World.moveSouth();
 				break;
 			case 37: // Left
 			case 65:
-				Engine.log('left');
-				if(World.curPos[0] > 0) World.curPos[0]--;
+				World.moveWest();
 				break;
 			case 39: // Right
 			case 68:
-				Engine.log('right');
-				if(World.curPos[0] < World.RADIUS * 2) World.curPos[0]++;
+				World.moveEast();
 				break;
 			default:
-				moved = false;
 				break;
 		}
-		if(moved) {
-			World.narrateMove(oldTile, World.state.map[World.curPos[0]][World.curPos[1]]);
-			World.lightMap(World.curPos[0], World.curPos[1], World.state.mask);
-			World.drawMap();
-			World.doSpace();
-			if(World.checkDanger()) {
-				if(World.danger) {
-					Notifications.notify(World, 'dangerous to be this far from the village without proper protection')
-				} else {
-					Notifications.notify(World, 'safer here');
-				}
-			}
+	},
+
+	swipeLeft: function(e) {
+		World.moveWest();
+	},
+
+	swipeRight: function(e) {
+		World.moveEast();
+	},
+
+	swipeUp: function(e) {
+		World.moveNorth();
+	},
+
+	swipeDown: function(e) {
+		World.moveSouth();
+	},
+
+	click: function(event) {
+		var map = $('#map'),
+			// measure clicks relative to the centre of the current location
+			centreX = map.offset().left + map.width() * World.curPos[0] / (World.RADIUS * 2),
+			centreY = map.offset().top + map.height() * World.curPos[1] / (World.RADIUS * 2),
+			clickX = event.pageX - centreX,
+			clickY = event.pageY - centreY;
+		if (clickX > clickY && clickX < -clickY) {
+			World.moveNorth();
+		}
+		if (clickX < clickY && clickX > -clickY) {
+			World.moveSouth();
+		}
+		if (clickX < clickY && clickX < -clickY) {
+			World.moveWest();
+		}
+		if (clickX > clickY && clickX > -clickY) {
+			World.moveEast();
 		}
 	},
 	
 	checkDanger: function() {
 		World.danger = typeof World.danger == 'undefined' ? false: World.danger;
 		if(!World.danger) {
-			if(!Engine.getStore('i armour') > 0 && World.getDistance() >= 8) {
+			if(!$SM.get('stores["i armour"]', true) > 0 && World.getDistance() >= 8) {
 				World.danger = true;
 				return true;
 			} 
-			if(!Engine.getStore('s armour') > 0 && World.getDistance() >= 18) {
+			if(!$SM.get('stores["s armour"]', true) > 0 && World.getDistance() >= 18) {
 				World.danger = true;
 				return true;
 			}
@@ -312,7 +417,7 @@ var World = {
 				World.danger = false;
 				return true;
 			}
-			if(World.getDistance < 18 && Engine.getStore('i armour') > 0) {
+			if(World.getDistance < 18 && $SM.get('stores["i armour"]', true) > 0) {
 				World.danger = false;
 				return true;
 			}
@@ -325,7 +430,7 @@ var World = {
 		World.waterMove++;
 		// Food
 		var movesPerFood = World.MOVES_PER_FOOD;
-		movesPerFood *= Engine.hasPerk('slow metabolism') ? 2 : 1;
+		movesPerFood *= $SM.hasPerk('slow metabolism') ? 2 : 1;
 		if(World.foodMove >= movesPerFood) {
 			World.foodMove = 0;
 			var num = Path.outfit['cured meat'];
@@ -336,13 +441,13 @@ var World = {
 				// Starvation! Hooray!
 				num = 0;
 				if(!World.starvation) {
-					Notifications.notify(World, 'starvation sets in')
+					Notifications.notify(World, 'starvation sets in');
 					World.starvation = true;
 				} else {
-					State.starved = State.starved ? State.starved : 0;
-					State.starved++;
-					if(State.starved >= 10 && !Engine.hasPerk('slow metabolism')) {
-						Engine.addPerk('slow metabolism');
+					$SM.set('character.starved', $SM.get('character.starved', true));
+					$SM.add('character.starved', 1);
+					if($SM.get('character.starved') >= 10 && !$SM.hasPerk('slow metabolism')) {
+						$SM.addPerk('slow metabolism');
 					}
 					World.die();
 					return false;
@@ -355,7 +460,7 @@ var World = {
 		}
 		// Water
 		var movesPerWater = World.MOVES_PER_WATER;
-		movesPerWater *= Engine.hasPerk('desert rat') ? 2 : 1;
+		movesPerWater *= $SM.hasPerk('desert rat') ? 2 : 1;
 		if(World.waterMove >= movesPerWater) {
 			World.waterMove = 0;
 			var water = World.water;
@@ -368,10 +473,10 @@ var World = {
 					Notifications.notify(World, 'the thirst becomes unbearable');
 					World.thirst = true;
 				} else {
-					State.dehydrated = State.dehydrated ? State.dehydrated : 0;
-					State.dehydrated++;
-					if(State.dehydrated >= 10 && !Engine.hasPerk('desert rat')) {
-						Engine.addPerk('desert rat');
+					$SM.set('character.dehydrated', $SM.get('character.dehydrated', true));
+					$SM.add('character.dehydrated', 1);
+					if($SM.get('character.dehydrated') >= 10 && !$SM.hasPerk('desert rat')) {
+						$SM.addPerk('desert rat');
 					}
 					World.die();
 					return false;
@@ -386,7 +491,11 @@ var World = {
 	},
 	
 	meatHeal: function() {
-		return World.MEAT_HEAL * (Engine.hasPerk('gastronome') ? 2 : 1);
+		return World.MEAT_HEAL * ($SM.hasPerk('gastronome') ? 2 : 1);
+	},
+	
+	medsHeal: function() {
+		return World.MEDS_HEAL;
 	},
 	
 	checkFight: function() {
@@ -394,7 +503,7 @@ var World = {
 		World.fightMove++;
 		if(World.fightMove > World.FIGHT_DELAY) {
 			var chance = World.FIGHT_CHANCE;
-			chance *= Engine.hasPerk('stealthy') ? 0.5 : 1;
+			chance *= $SM.hasPerk('stealthy') ? 0.5 : 1;
 			if(Math.random() < chance) {
 				World.fightMove = 0;
 				Events.triggerFight();
@@ -418,8 +527,10 @@ var World = {
 		}
 	},
 	
-	getDistance: function() {
-		return Math.abs(World.curPos[0] - World.RADIUS) + Math.abs(World.curPos[1] - World.RADIUS);
+	getDistance: function(from, to) {
+		from = from || World.curPos;
+		to = to || World.VILLAGE_POS;
+		return Math.abs(from[0] - to[0]) + Math.abs(from[1] - to[1]);
 	},
 	
 	getTerrain: function() {
@@ -476,7 +587,7 @@ var World = {
 	
 	lightMap: function(x, y, mask) {
 		var r = World.LIGHT_RADIUS;
-		r *= Engine.hasPerk('scout') ? 2 : 1;
+		r *= $SM.hasPerk('scout') ? 2 : 1;
 		World.uncoverMap(x, y, r, mask);
 		return mask;
 	},
@@ -497,7 +608,7 @@ var World = {
 	applyMap: function() {
 		var x = Math.floor(Math.random() * (World.RADIUS * 2) + 1);
 		var y = Math.floor(Math.random() * (World.RADIUS * 2) + 1);
-		World.uncoverMap(x, y, 5, State.world.mask);
+		World.uncoverMap(x, y, 5, $SM.get('game.world.mask'));
 	},
 	
 	generateMap: function() {
@@ -509,7 +620,7 @@ var World = {
 		// Spiral out from there
 		map[World.RADIUS][World.RADIUS] = World.TILE.VILLAGE;
 		for(var r = 1; r <= World.RADIUS; r++) {
-			for(t = 0; t < r * 8; t++) {
+			for(var t = 0; t < r * 8; t++) {
 				var x, y;
 				if(t < 2 * r) {
 					x = World.RADIUS - r + t;
@@ -578,8 +689,6 @@ var World = {
 	
 	chooseTile: function(x, y, map) {
 		
-		var log = x == World.RADIUS + 1 && y == World.RADIUS + 1;
-		
 		var adjacent = [
 			y > 0 ? map[x][y-1] : null,
 			y < World.RADIUS * 2 ? map[x][y+1] : null,
@@ -641,6 +750,8 @@ var World = {
 		var map = $('#map');
 		if(map.length == 0) {
 			map = new $('<div>').attr('id', 'map').appendTo('#worldOuter');
+			// register click handler
+			map.click(World.click);
 		}
 		var mapString = "";
 		for(var j = 0; j <= World.RADIUS * 2; j++) {
@@ -697,6 +808,7 @@ var World = {
 			$('#outerSlider').animate({opacity: '0'}, 600, 'linear', function() {
 				$('#outerSlider').css('left', '0px');
 				$('#locationSlider').css('left', '0px');
+				$('#storesContainer').css({'top': '0px', 'right': '0px'});
 				Engine.activeModule = Room;
 				$('div.headerButton').removeClass('selected');
 				Room.tab.addClass('selected');
@@ -712,20 +824,20 @@ var World = {
 	
 	goHome: function() {
 		// Home safe! Commit the changes.
-		State.world = World.state;
-		if(World.state.sulphurmine && Outside.numBuilding('sulphur mine') == 0) {
-			Outside.addBuilding('sulphur mine', 1);
+		$SM.setM('game.world', World.state);
+		if(World.state.sulphurmine && $SM.get('game.buildings["sulphur mine"]', true) == 0) {
+			$SM.add('game.buildings["sulphur mine"]', 1);
 			Engine.event('progress', 'sulphur mine');
 		}
-		if(World.state.ironmine && Outside.numBuilding('iron mine') == 0) {
-			Outside.addBuilding('iron mine', 1);
+		if(World.state.ironmine && $SM.get('game.buildings["iron mine"]', true) == 0) {
+			$SM.add('game.buildings["iron mine"]', 1);
 			Engine.event('progress', 'iron mine');
 		}
-		if(World.state.coalmine && Outside.numBuilding('coal mine') == 0) {
-			Outside.addBuilding('coal mine', 1);
+		if(World.state.coalmine && $SM.get('game.buildings["coal mine"]', true) == 0) {
+			$SM.add('game.buildings["coal mine"]', 1);
 			Engine.event('progress', 'coal mine');
 		}
-		if(World.state.ship && !State.ship) {
+		if(World.state.ship && !$SM.get('features.location.spaceShip')) {
 			Ship.init();
 			Engine.event('progress', 'ship');
 		}
@@ -738,7 +850,7 @@ var World = {
 		}
 		
 		for(var k in Path.outfit) {
-			Engine.addStore(k, Path.outfit[k]);
+			$SM.add('stores["'+k+'"]', Path.outfit[k]);
 			if(World.leaveItAtHome(k)) {
 				Path.outfit[k] = 0;
 			}
@@ -750,34 +862,34 @@ var World = {
 	},
 	
 	leaveItAtHome: function(thing) {
-		 return thing != 'cured meat' && thing != 'bullets' && thing != 'energy cell'  && thing != 'charm'
+		 return thing != 'cured meat' && thing != 'bullets' && thing != 'energy cell'  && thing != 'charm' && thing != 'medicine'
 			 && typeof World.Weapons[thing] == 'undefined' && typeof Room.Craftables[thing] == 'undefined';
 	},
 	
 	getMaxHealth: function() {
-		if(Engine.getStore('s armour') > 0) {
+		if($SM.get('stores["s armour"]', true) > 0) {
 			return World.BASE_HEALTH + 35;
-		} else if(Engine.getStore('i armour') > 0) {
+		} else if($SM.get('stores["i armour"]', true) > 0) {
 			return World.BASE_HEALTH + 15;
-		} else if(Engine.getStore('l armour') > 0) {
+		} else if($SM.get('stores["l armour"]', true) > 0) {
 			return World.BASE_HEALTH + 5;
 		}
 		return World.BASE_HEALTH;
 	},
 	
 	getHitChance: function() {
-		if(Engine.hasPerk('precise')) {
+		if($SM.hasPerk('precise')) {
 			return World.BASE_HIT_CHANCE + 0.1;
 		}
 		return World.BASE_HIT_CHANCE;
 	},
 	
 	getMaxWater: function() {
-		if(Engine.getStore('water tank') > 0) {
+		if($SM.get('stores["water tank"]', true) > 0) {
 			return World.BASE_WATER + 50;
-		} else if(Engine.getStore('cask') > 0) {
+		} else if($SM.get('stores.cask', true) > 0) {
 			return World.BASE_WATER + 20;
-		} else if(Engine.getStore('waterskin') > 0) {
+		} else if($SM.get('stores.waterskin', true) > 0) {
 			return World.BASE_WATER + 10;
 		}
 		return World.BASE_WATER;
@@ -794,7 +906,7 @@ var World = {
 		Notifications.notify(null, 'water replenished');
 		World.setWater(World.getMaxWater());
 		// Save progress at outposts
-		State.world = World.state;
+		$SM.setM('game.world', World.state);
 		// Mark this outpost as used
 		World.usedOutposts[World.curPos[0] + ',' + World.curPos[1]] = true;
 	},
@@ -802,7 +914,7 @@ var World = {
 	onArrival: function() {
 		Engine.keyLock = false;
 		// Explore in a temporary world-state. We'll commit the changes if you return home safe.
-		World.state = $.extend(true, {}, State.world);
+		World.state = $.extend(true, {}, $SM.get('game.world'));
 		World.setWater(World.getMaxWater());
 		World.setHp(World.getMaxHealth());
 		World.foodMove = 0;
@@ -810,7 +922,7 @@ var World = {
 		World.starvation = false;
 		World.thirst = false;
 		World.usedOutposts = {};
-		World.curPos = [World.RADIUS, World.RADIUS];
+		World.curPos = World.copyPos(World.VILLAGE_POS);
 		World.drawMap();
 		World.setTitle();
 		World.dead = false;
@@ -821,5 +933,13 @@ var World = {
 	
 	setTitle: function() {
 		document.title = 'A Barren World';
+	},
+	
+	copyPos: function(pos) {
+		return [pos[0], pos[1]];
+	},
+	
+	handleStateUpdates: function(e){
+		
 	}
 };
