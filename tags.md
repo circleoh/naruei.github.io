@@ -1,10 +1,8 @@
 ---
 layout: page
-title: Categories
-permalink: /cats/
+title: Tags
+permalink: /tags/
 ---
-
-
 
 {% for tag in site.tags %}
 ### {{ tag[0] }}
