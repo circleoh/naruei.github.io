@@ -9,6 +9,8 @@ open: true
 
 The following `code` implements this idea.
 ```python
+import math
+
 for i in range(10):
     print("this is wrong!")
 ```
