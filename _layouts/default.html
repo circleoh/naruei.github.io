@@ -3,7 +3,7 @@
 {% include head.html %}
 <body>
     <header>
-        <a class="site-title" href="{% include relative %}" >{{ site.title }}</a>
+        <a class="site-title">{{ site.title }}</a>
         <div style="display: inline-block">
             {% for my_page in site.pages %}{% if my_page.title and my_page.noindex != true %}
              | <a href="{% include relative %}{{ my_page.url | relative_url }}">{{ my_page.title }}</a>
@@ -19,7 +19,12 @@
     </main>
     <hr>
     <footer>
-        {% capture footer-md %}{% include footer.md %}{% endcapture %}{{ footer-md | markdownify }}
+        <div>
+            <span>Copyright © H. Lee <script>document.write(new Date().getFullYear())</script>.</span>
+        </div>
+        <div>
+            Visit <a target="_blank" href="https://hyeondnl.github.io">hyeondnl.github.io</a>
+        </div>
     </footer>
 </body>
 </html>
