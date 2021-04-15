@@ -8,7 +8,7 @@ mathjax: on
 
 ### Recursive functions
 
-$$ e \frac{\sigma |- e_1 \implies 0 \qquad \sigma |- e_2 \implies v}{\sigma |- if0 e_1 e_2 e_3 \implies v} $$
+$$ \frac{\sigma \vdash e_1 \implies 0 \qquad \sigma \vdash e_2 \implies v}{\sigma \vdash \texttt{if0} e_1 \, e_2 \, e_3 \implies v} $$
 
 The following `code` implements this idea.
 ```
