@@ -1,10 +1,10 @@
 ---
 layout: page
-title: Tags
-permalink: /tags/
+title: Categories
+permalink: /cats/
 ---
 
-{% for tag in site.tags %}{% assign tagname = tag[0] %}[#{{ tagname }}](#{{ tagname }}) {% endfor %}
+
 
 {% for tag in site.tags %}
 ### {{ tag[0] }}
