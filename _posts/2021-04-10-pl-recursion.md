@@ -1,14 +1,14 @@
 ---
 layout: post
 title:  Recursion
-tags: pl
+tags: PL
 open: true
 ---
 
 #### Recursive functions
 
 The following `code` implements this idea.
-```python
+```
 import math
 
 for i in range(10):
