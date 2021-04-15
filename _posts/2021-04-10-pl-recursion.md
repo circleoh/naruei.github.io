@@ -7,7 +7,8 @@ open: true
 
 ### Recursive functions
 
-\\( $e \coloneqq 0$ \\)
+\\(x\\)
+$e \coloneqq 0$
 The following `code` implements this idea.
 ```
 import math
