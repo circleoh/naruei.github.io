@@ -9,8 +9,7 @@ open: true
 
 The following `code` implements this idea.
 
-```scala
-
+```
 import std.stdio;
 
 void main()
