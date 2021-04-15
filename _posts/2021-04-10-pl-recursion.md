@@ -7,8 +7,8 @@ open: true
 
 ### Recursive functions
 
-\\(x\\)
-$e \coloneqq 0$
+\\( MathJax \\)
+
 The following `code` implements this idea.
 ```
 import math
