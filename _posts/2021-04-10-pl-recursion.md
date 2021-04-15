@@ -8,7 +8,7 @@ mathjax: on
 
 ### Recursive functions
 
-$$ e \coloneq 0 $$
+$$ e &#x2254; 0 $$
 
 The following `code` implements this idea.
 ```
