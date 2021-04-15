@@ -38,12 +38,6 @@ $$ \frac{\sigma \vdash e_1 \implies v' \quad v' \neq 0 \quad \sigma \vdash e_3 \
 
 $$ \frac{\sigma' = \sigma[ x_1 \to \langle \lambda x_2 . e_1, \sigma ' \rangle] \quad \sigma' \vdash e_2 \implies v }{\sigma  \vdash \texttt{def} \, x_1 (x_2) = e_1; \, e_2 \implies v} $$
 
-The following `code` implements this idea.
-```
-import math
 
-for i in range(10):
-    print("this is wrong!")
-```
 
-*All the materials are from CS320 class held on KAIST.*
+*All the materials are from CS320 class held on KAIST, 2021-spring.*
