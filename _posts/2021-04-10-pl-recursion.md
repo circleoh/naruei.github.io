@@ -8,12 +8,7 @@ open: true
 #### Recursive functions
 
 The following `code` implements this idea.
-
-```scala
-import std.stdio;
-
-void main()
-{
-    writeln("hello world");
-}
+```python
+for i in range(10):
+    print("this is wrong!")
 ```
