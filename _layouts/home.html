@@ -14,7 +14,6 @@ layout: default
             {% for tag in post.tags %}
             @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
             {% endfor %}
-            on <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%b %-d, %Y" }}</time>
         </p>
     </li>
     {% endfor %}
