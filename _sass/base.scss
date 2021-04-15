@@ -1,4 +1,4 @@
-$base-font-size: 15px !default;
+$base-font-size: 12px !default;
 $text-color: black;
 $border-color: lightgray;
 
@@ -27,13 +27,13 @@ header,footer {
 }
 
 .home {
-    padding: 1em;
+    padding: 0em;
 }
 
 .site-title {
     color: $text-color;
     font-weight: bold; 
-    font-size: large;
+    font-size: 15px;
 }
 
 .post-counter {
