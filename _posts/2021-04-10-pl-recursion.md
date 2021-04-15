@@ -3,11 +3,12 @@ layout: post
 title:  Recursion
 tags: PL
 open: true
+mathjax: true
 ---
 
 ### Recursive functions
 
-\\( MathJax \\)
+\\( e \coloneqq 0\\)
 
 The following `code` implements this idea.
 ```
