@@ -23,10 +23,6 @@ li {
     margin-bottom: 10px;
 }
 
-article {
-    padding: 0 3rem 0 3rem;
-}
-
 header,footer {
     padding: 5px;
 }
@@ -56,6 +52,10 @@ header,footer {
 //    }
 //}
 
+article {
+    padding: 0 3rem 0 3rem;
+}
+
 .content-wrapper {
     max-width: 800px;
     margin-right: 1rem;
@@ -64,3 +64,10 @@ header,footer {
         max-width: 100%;
     }
 }
+
+
+@media only screen and (max-width: 600px) {
+    article {
+        padding: 0 0.5rem 0 0.5rem;
+    }
+  }

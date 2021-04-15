@@ -8,7 +8,7 @@ layout: default
         </h1>
         <p class="post-info">
             {% for tag in page.tags %}
-             @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
+            @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
             {% endfor %}
             on <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%b %-d, %Y" }}</time>
         </p>
