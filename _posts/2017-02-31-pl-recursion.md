@@ -5,4 +5,14 @@ tags: pl
 open: true
 ---
 
-### Recursive functions
+#### Recursive functions
+
+The following `code` implements this idea.
+
+```
+import std.stdio;
+
+void main()
+{
+    writeln("hello world");
+}
