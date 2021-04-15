@@ -6,10 +6,9 @@ permalink: /tags/
 
 {% for tag in site.tags %}
 ### {{ tag[0] }}
-{{ tag[1] | size }} posts
-  {% for post in tag[1] %}
-  {% if post.open %}
- - [{{ post.title }}]({% include relative %}{{ post.url }})
-  {% endif %}
-  {% endfor %}
+{% for post in tag[1] %}
+{% if post.open %}
+- [{{ post.title }}]({% include relative %}{{ post.url }})
+{% endif %}
+{% endfor %}
 {% endfor %}
