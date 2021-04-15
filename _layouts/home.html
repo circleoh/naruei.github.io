@@ -10,14 +10,11 @@ layout: default
     {% for post in site.posts %}
     {% if post.open %}
     <li>
-        <div style="overflow: hidden;">
-            <a href="{% include relative %}{{ post.url | relative_url }}">{{ post.title }}</a> <p class="post-info">
-                {% for tag in post.tags %}
-                @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
-                {% endfor %}
-            </p>
-        </div>
-        
+        <a class="inline" href="{% include relative %}{{ post.url | relative_url }}">{{ post.title }}</a> <p class="post-info inline">
+            {% for tag in post.tags %}
+            @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
+            {% endfor %}
+        </p>
     </li>
     {% endif %}
     {% endfor %}
