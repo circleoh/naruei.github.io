@@ -25,6 +25,7 @@ twitter_username: hyeondgl
 
 # Build settings
 markdown: kramdown
+mathjax: true
 sass:
   style: compressed
 
