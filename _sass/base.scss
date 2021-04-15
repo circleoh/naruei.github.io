@@ -1,7 +1,6 @@
 $base-font-size: 12px !default;
 $text-color: black;
 $line-color: rgb(250, 250, 250);
-$border-color: lightgrey;
 
 body {
     color: $text-color;
@@ -21,6 +20,7 @@ ul {
 li {
     margin-left: -2rem;
     margin-bottom: 0px;
+    margin-bottom: 2px;
 }
 
 header,footer {
@@ -74,6 +74,7 @@ article {
 }
 
 @media only screen and (max-width: 800px) {
+    $base-font-size: 11px !default;
     article {
         padding: 0 1rem 0 1rem;
     }
@@ -81,6 +82,6 @@ article {
     li {
         margin-left: -2rem;
         margin-bottom: 0px;
-        margin-bottom: 2px;
+        margin-bottom: 5px;
     }
   }
