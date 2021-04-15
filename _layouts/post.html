@@ -7,10 +7,10 @@ layout: default
             {{ page.title | escape }}
         </h1>
         <p class="post-info">
-                <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%b %-d, %Y" }}</time>
             {% for tag in page.tags %}
              @<a href="{% include relative %}/tags/#{{ tag | downcase }}">{{ tag }}</a>
             {% endfor %}
+            on <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%b %-d, %Y" }}</time>
         </p>
     </div>
     {{ content }}
