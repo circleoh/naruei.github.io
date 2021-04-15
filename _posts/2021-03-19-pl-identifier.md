@@ -19,7 +19,6 @@ There are only one possible type of value at this point; an integer.
 ```swift
 enum Value {
     case NumV(Int)
-    case CloV(String, Expr, Env)
 }
 ```
 
@@ -58,4 +57,4 @@ func interp(_ e: Expr, _ env: Env) -> Value
 
 
 
-*All the materials are from CS320 class held on KAIST, 2021-spring.*
+*All the materials are from CS320 class held on KAIST, 2021 spring.*
