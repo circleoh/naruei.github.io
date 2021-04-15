@@ -62,12 +62,12 @@ header,footer {
 
 article {
     padding: 0 3rem 0 3rem;
-    max-width: 800px;
+    max-width: 900px;
     margin: auto;
 }
 
 .content-wrapper {
-    max-width: 800px;
+    max-width: 1200px;
     margin-right: 1rem;
     margin-left: 1rem;
     * {
@@ -75,7 +75,7 @@ article {
     }
 }
 
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 600px) {
     $base-font-size: 11px !default;
     article {
         padding: 0 1rem 0 1rem;
